@@ -1,0 +1,39 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"types": ["node"],
+
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"moduleDetection": "force",
+
+		/* Behavior */
+		"useDefineForClassFields": true,
+		"isolatedModules": true,
+		"skipLibCheck": true,
+		"noUncheckedSideEffectImports": true,
+
+		/* Build */
+		"declaration": true,
+		"declarationMap": true,
+		"composite": true,
+		"outDir": "./dist",
+		"rootDir": "./src",
+
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx",
+
+		"strict": true,
+		"verbatimModuleSyntax": true,
+
+		"noImplicitAny": true,
+		"noImplicitOverride": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noPropertyAccessFromIndexSignature": true
+	},
+
+	"include": ["src/**/*.ts", "src/**/*.tsx", "cmd/**/*.ts"],
+	"exclude": ["node_modules", "**/*.test.ts"]
+}
