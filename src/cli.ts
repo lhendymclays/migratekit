@@ -28,8 +28,13 @@ program
 	.description("Run up all migrations")
 	.option("--envFile <env_file_name>", "Environment File")
 	.option("--database <database_name>", "Database Name")
+	.option("--dir <migration_folder>", "Migration Folder", "migrations")
 	.action((options) => {
 		up(options);
 	});
 
 program.parse();
+
+process.on("uncaughtException", (err) => {
+	console.error(err);
+});
