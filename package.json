@@ -10,7 +10,7 @@
 		"migrations",
 		"mssql"
 	],
-	"packageManager": "pnpm@11.5.2",
+	"packageManager": "pnpm@11.5.3",
 	"outDir": "./dist",
 	"rootDir": "./src",
 	"scripts": {
@@ -28,6 +28,7 @@
 	},
 	"dependencies": {
 		"commander": "^15.0.0",
+		"dotenv": "^17.4.2",
 		"mssql": "^12.5.5",
 		"zod": "^4.4.3"
 	},
@@ -36,4 +37,3 @@
 		"migrate": "dist/cli.js"
 	}
 }
-
