@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Command } from "commander";
-import { createMigration } from "./create.js";
-import { up, down } from "./migrate.js";
+import { createMigration } from "./commands/create.js";
+import { up, down } from "./commands/migrate.js";
 
 const program = new Command();
 
