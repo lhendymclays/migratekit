@@ -5,6 +5,11 @@
 	"description": "Database migration tooling",
 	"author": "Lewis Hendy",
 	"license": "MIT",
+	"keywords": [
+		"migration",
+		"migrations",
+		"mssql"
+	],
 	"packageManager": "pnpm@11.5.2",
 	"outDir": "./dist",
 	"rootDir": "./src",
@@ -31,3 +36,4 @@
 		"migrate": "dist/cli.js"
 	}
 }
+
