@@ -369,9 +369,9 @@ export async function down(options: any): Promise<void> {
 				const log = new sql.Request(t);
 				log.input("name", fileName.replace(".down.sql", ""));
 				await log.query(`
-				DELETE FROM migrations
-				WHERE name = @name
-			`);
+					DELETE FROM migrations
+					WHERE name = @name
+				`);
 			}
 		}
 
