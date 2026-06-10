@@ -58,8 +58,6 @@ export function createMigration(name: any, options: any): string {
 			`-- ${baseName} DOWN\n\n-- rollback SQL here\n`
 		);
 
-		console.log(`Created migration: ${baseName}`);
-
 		return baseName;
 	} catch (err: unknown) {
 		const errorPrefix = "creating migration file";

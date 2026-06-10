@@ -20,13 +20,19 @@ program
 		path.join(process.cwd(), "migrations")
 	)
 	.action((name, options) => {
-		createMigration(name, options);
+		const migrationName = createMigration(name, options);
+		console.log(`Created migration: ${migrationName}`);
 	});
 
 program
 	.command("up")
 	.description("Run all up migrations")
-	.option("--envFile <env_file_name>", "Environment File")
+	.option("--env <env_file_name>", "Environment File")
+	.option("--config <config_file_name>", "Config File")
+	.option("--driver <database_driver>", "Database Driver")
+	.option("--host <database_host>", "Database Host")
+	.option("--user <database_user>", "Database User")
+	.option("--password <database_password>", "Database Password")
 	.option("--database <database_name>", "Database Name")
 	.option("--dir <migration_folder>", "Migration Folder", "migrations")
 	.action((options) => {
@@ -36,7 +42,12 @@ program
 program
 	.command("down")
 	.description("Run all down migrations")
-	.option("--envFile <env_file_name>", "Environment File")
+	.option("--env <env_file_name>", "Environment File")
+	.option("--config <config_file_name>", "Config File")
+	.option("--driver <database_driver>", "Database Driver")
+	.option("--host <database_host>", "Database Host")
+	.option("--user <database_user>", "Database User")
+	.option("--password <database_password>", "Database Password")
 	.option("--database <database_name>", "Database Name")
 	.option("--dir <migration_folder>", "Migration Folder", "migrations")
 	.option("--num <number>", "Number Of down migrations", "1")

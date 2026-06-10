@@ -3,7 +3,7 @@ import fs from "node:fs";
 import z from "zod";
 
 import { createDatabase } from "../db/factory.js";
-import { loadConfig } from "../config/config.js";
+import { loadOptions } from "../config/config.js";
 import {
 	loadDownMigrationFiles,
 	loadMigrationTable,
@@ -11,10 +11,15 @@ import {
 } from "../migrations/index.js";
 
 /**
- * Schema for cli options for creating new migration file
+ * Schema for cli options for down migration
  */
-const optionsSchema = z.object({
-	envFile: z.string().optional(),
+const upOptionsSchema = z.object({
+	env: z.string().optional(),
+	driver: z.string().optional(),
+	config: z.string().optional(),
+	host: z.string().optional(),
+	user: z.string().optional(),
+	password: z.string().optional(),
 	database: z.string().optional(),
 	dir: z.string()
 });
@@ -23,7 +28,12 @@ const optionsSchema = z.object({
  * Schema for cli options for down migration
  */
 const downOptionsSchema = z.object({
-	envFile: z.string().optional(),
+	env: z.string().optional(),
+	driver: z.string().optional(),
+	config: z.string().optional(),
+	host: z.string().optional(),
+	user: z.string().optional(),
+	password: z.string().optional(),
 	database: z.string().optional(),
 	dir: z.string(),
 	num: z.coerce.number(),
@@ -38,13 +48,13 @@ const downOptionsSchema = z.object({
  */
 export async function up(options: any): Promise<void> {
 	// Validate options
-	const parseRes = optionsSchema.safeParse(options);
+	const parseRes = upOptionsSchema.safeParse(options);
 	if (!parseRes.success) {
 		throw Error(z.prettifyError(parseRes.error));
 	}
-	const opts = parseRes.data;
+	const inputOptions = parseRes.data;
 
-	const config = await loadConfig();
+	const config = loadOptions(inputOptions);
 	const db = createDatabase(config);
 
 	try {
@@ -53,7 +63,7 @@ export async function up(options: any): Promise<void> {
 
 		const [migrations, files] = await Promise.all([
 			loadMigrationTable(db),
-			loadUpMigrationFiles(opts.dir)
+			loadUpMigrationFiles(inputOptions.dir)
 		]);
 
 		await tsx.begin();
@@ -65,7 +75,7 @@ export async function up(options: any): Promise<void> {
 				continue;
 			}
 
-			const filePath = path.join(opts.dir, fileName);
+			const filePath = path.join(inputOptions.dir, fileName);
 			const file = fs.readFileSync(filePath, { encoding: "utf-8" });
 
 			console.log(file);
@@ -104,9 +114,9 @@ export async function down(options: any): Promise<void> {
 	if (!parseRes.success) {
 		throw Error(z.prettifyError(parseRes.error));
 	}
-	const opts = parseRes.data;
+	const inputOptions = parseRes.data;
 
-	const config = await loadConfig();
+	const config = await loadOptions(inputOptions);
 	const db = createDatabase(config);
 
 	try {
@@ -115,7 +125,7 @@ export async function down(options: any): Promise<void> {
 
 		const [migrations, files] = await Promise.all([
 			loadMigrationTable(db),
-			loadDownMigrationFiles(opts.dir)
+			loadDownMigrationFiles(inputOptions.dir)
 		]);
 
 		const migrationArray = Array.from(migrations.values());
@@ -123,10 +133,10 @@ export async function down(options: any): Promise<void> {
 		await tsx.begin();
 
 		// Migrations
-		if (opts.all) {
+		if (inputOptions.all) {
 			throw Error("all command not implemented");
 		} else {
-			for (let i = 0; i < opts.num; i++) {
+			for (let i = 0; i < inputOptions.num; i++) {
 				if (migrationArray.length === 0) {
 					continue;
 				}
@@ -138,7 +148,7 @@ export async function down(options: any): Promise<void> {
 				const migration = migrationArray[i];
 				const fileName = migration.name + ".down.sql";
 
-				const filePath = path.join(opts.dir, fileName);
+				const filePath = path.join(inputOptions.dir, fileName);
 
 				if (!files.some((f) => f === fileName)) {
 					throw Error("down migration file not found");

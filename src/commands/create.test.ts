@@ -12,7 +12,7 @@ import { mkdirSync, existsSync, rmSync, rmdirSync } from "fs";
 import path from "path";
 import { createMigration } from "./create";
 
-const tmpDir = path.join(os.tmpdir(), "db_migrate");
+const tmpDir = path.join(os.tmpdir(), "migratekit");
 
 suite("Create migration file", function () {
 	beforeEach(async function () {
