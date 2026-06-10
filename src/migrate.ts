@@ -16,6 +16,12 @@ export type Config = {
 	};
 };
 
+export type Migration = {
+	id: number;
+	name: string;
+	timeStamp: Date;
+};
+
 /**
  * Schema for config cjs file
  */
@@ -36,6 +42,17 @@ const optionsSchema = z.object({
 	envFile: z.string().optional(),
 	database: z.string().optional(),
 	dir: z.string()
+});
+
+/**
+ * Schema for cli options for down migration
+ */
+const downOptionsSchema = z.object({
+	envFile: z.string().optional(),
+	database: z.string().optional(),
+	dir: z.string(),
+	num: z.coerce.number(),
+	all: z.coerce.boolean()
 });
 
 /**
@@ -109,8 +126,11 @@ async function connectDb(config: Config): Promise<sql.ConnectionPool> {
 /**
  * Handles initializing migration table if it doesn't exist
  * @param {sql.ConnectionPool} pool
+ * @returns {Promise<Map<string, Migration>>}
  */
-async function initializeMigrationTable(pool: sql.ConnectionPool) {
+async function loadMigrationTable(
+	pool: sql.ConnectionPool
+): Promise<Map<string, Migration>> {
 	try {
 		await pool.query(`
 			IF OBJECT_ID('dbo.migrations', 'U') IS NULL
@@ -121,7 +141,35 @@ async function initializeMigrationTable(pool: sql.ConnectionPool) {
 					time_stamp DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET()
 				);
 			END
-			`);
+		`);
+
+		const res = await pool.query(`
+			SELECT id, name, time_stamp
+			FROM dbo.migrations
+			ORDER BY time_stamp DESC, id DESC, name DESC;
+		`);
+
+		const map: Map<string, Migration> = new Map();
+
+		for (const row of res.recordset) {
+			const id = row["id"];
+			const name = row["name"];
+			const timeStamp = row["time_stamp"];
+
+			if (typeof id !== "number") {
+				throw Error("id was not of type number");
+			}
+			if (typeof name !== "string") {
+				throw Error("name was not of type string");
+			}
+			if (!(timeStamp instanceof Date)) {
+				throw Error("time stamp was not of type Date");
+			}
+
+			map.set(name, { id, name, timeStamp });
+		}
+
+		return map;
 	} catch (err: unknown) {
 		const errorPrefix = "initializing migration table";
 
@@ -134,11 +182,11 @@ async function initializeMigrationTable(pool: sql.ConnectionPool) {
 }
 
 /**
- * Loads all .sql files from migration folder
+ * Loads all .up.sql files from migration folder
  * @param {string} dirPath
  * @returns {string[]}
  */
-function loadMigrationFiles(dirPath: string): string[] {
+function loadUpMigrationFiles(dirPath: string): string[] {
 	try {
 		dirPath = path.resolve(dirPath);
 
@@ -146,7 +194,36 @@ function loadMigrationFiles(dirPath: string): string[] {
 			throw Error("migration folder not found");
 		}
 
-		return fs.readdirSync(dirPath).filter((file) => file.endsWith(".sql"));
+		return fs
+			.readdirSync(dirPath)
+			.filter((file) => file.endsWith(".up.sql"));
+	} catch (err: unknown) {
+		const errorPrefix = "initializing migration table";
+
+		if (err instanceof Error) {
+			throw Error(`${errorPrefix}: ${err.message}`);
+		} else {
+			throw Error(`${errorPrefix}: unknown error type: ${String(err)}`);
+		}
+	}
+}
+
+/**
+ * Loads all .down.sql files from migration folder
+ * @param {string} dirPath
+ * @returns {string[]}
+ */
+function loadDownMigrationFiles(dirPath: string): string[] {
+	try {
+		dirPath = path.resolve(dirPath);
+
+		if (!fs.existsSync(dirPath)) {
+			throw Error("migration folder not found");
+		}
+
+		return fs
+			.readdirSync(dirPath)
+			.filter((file) => file.endsWith(".down.sql"));
 	} catch (err: unknown) {
 		const errorPrefix = "initializing migration table";
 
@@ -177,27 +254,134 @@ export async function up(options: any): Promise<void> {
 
 	// Open connection
 	const pool = await connectDb(config);
-	await initializeMigrationTable(pool);
-
-	// Load migration files
-	const files = loadMigrationFiles(opts.dir);
 
 	try {
+		const migrations = await loadMigrationTable(pool);
+
+		// Load migration files
+		const files = loadUpMigrationFiles(opts.dir);
+
 		// Start transaction
 		const transaction = new sql.Transaction(pool);
 		const t = await transaction.begin();
 
-		/*
-
 		// Migrations
-		const request = new sql.Request(t);
-		await request.query("");
+		for (const fileName of files) {
+			if (migrations.has(fileName)) {
+				console.log(`Skipping migration: ${fileName}`);
+				continue;
+			}
 
-		*/
+			const filePath = path.join(opts.dir, fileName);
+			const file = fs.readFileSync(filePath, { encoding: "utf-8" });
+
+			console.log(file);
+
+			const migration = new sql.Request(t);
+			await migration.query(file);
+
+			const log = new sql.Request(t);
+			log.input("name", fileName.replace(".up.sql", ""));
+			await log.query(`
+				INSERT INTO migrations
+				(name)
+				VALUES (@name)
+			`);
+		}
 
 		// Commit
 		await t.commit();
+
+		console.log("All Migrations Complete !!");
 	} catch (err: unknown) {
+		const errorPrefix = "performing up migrations";
+
+		if (err instanceof Error) {
+			throw Error(`${errorPrefix}: ${err.message}`);
+		} else {
+			throw Error(`${errorPrefix}: unknown error type: ${String(err)}`);
+		}
+	} finally {
+		try {
+			await pool.close();
+		} catch {}
+	}
+}
+
+/**
+ * Performs down migrations
+ * @param {any} options
+ * @returns {Promise<void>}
+ * @throws {Error}
+ */
+export async function down(options: any): Promise<void> {
+	// Validate options
+	const parseRes = downOptionsSchema.safeParse(options);
+	if (!parseRes.success) {
+		throw Error(z.prettifyError(parseRes.error));
+	}
+	const opts = parseRes.data;
+
+	// Load config
+	const config = await loadConfig();
+
+	// Open connection
+	const pool = await connectDb(config);
+
+	const migrations = await loadMigrationTable(pool);
+	const migrationArray = Array.from(migrations.values());
+
+	// Start transaction
+	const transaction = new sql.Transaction(pool);
+
+	try {
+		const t = await transaction.begin();
+
+		// Migrations
+		if (opts.all) {
+			throw Error("all command not implemented");
+		} else {
+			for (let i = 0; i < opts.num; i++) {
+				if (migrationArray.length === 0) {
+					continue;
+				}
+
+				if (i >= migrationArray.length) {
+					throw Error("exceeded migration length");
+				}
+
+				const migration = migrationArray[i];
+				const fileName = migration.name + ".down.sql";
+
+				const filePath = path.join(opts.dir, fileName);
+
+				if (!fs.existsSync(filePath)) {
+					throw Error("down migration file not found");
+				}
+
+				const file = fs.readFileSync(filePath, { encoding: "utf-8" });
+
+				console.log(file);
+
+				const downMigration = new sql.Request(t);
+				await downMigration.query(file);
+
+				const log = new sql.Request(t);
+				log.input("name", fileName.replace(".down.sql", ""));
+				await log.query(`
+				DELETE FROM migrations
+				WHERE name = @name
+			`);
+			}
+		}
+
+		// Commit
+		await t.commit();
+
+		console.log("All Migrations Complete !!");
+	} catch (err: unknown) {
+		await transaction.rollback().catch(() => {});
+
 		const errorPrefix = "performing up migrations";
 
 		if (err instanceof Error) {
