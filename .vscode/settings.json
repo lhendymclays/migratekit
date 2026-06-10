@@ -1,3 +1,9 @@
 {
-	"cSpell.words": ["migratekit", "Millis", "recordset"]
+	"cSpell.words": [
+		"DATETIMEOFFSET",
+		"migratekit",
+		"Millis",
+		"recordset",
+		"SYSDATETIMEOFFSET"
+	]
 }
