@@ -6,7 +6,6 @@ import { createDatabase } from "../db/factory.js";
 import { loadOptions } from "../config/config.js";
 import {
 	loadDownMigrationFiles,
-	loadMigrationTable,
 	loadUpMigrationFiles
 } from "../migrations/index.js";
 
@@ -59,10 +58,11 @@ export async function up(options: any): Promise<void> {
 
 	try {
 		await db.connect();
+		await db.initMigrationTable();
 		const tsx = db.transaction();
 
 		const [migrations, files] = await Promise.all([
-			loadMigrationTable(db),
+			db.loadMigrationTableMap(),
 			loadUpMigrationFiles(inputOptions.dir)
 		]);
 
@@ -116,19 +116,18 @@ export async function down(options: any): Promise<void> {
 	}
 	const inputOptions = parseRes.data;
 
-	const config = await loadOptions(inputOptions);
+	const config = loadOptions(inputOptions);
 	const db = createDatabase(config);
 
 	try {
 		await db.connect();
+		await db.initMigrationTable();
 		const tsx = db.transaction();
 
 		const [migrations, files] = await Promise.all([
-			loadMigrationTable(db),
+			db.loadMigrationTableArray(),
 			loadDownMigrationFiles(inputOptions.dir)
 		]);
-
-		const migrationArray = Array.from(migrations.values());
 
 		await tsx.begin();
 
@@ -137,15 +136,15 @@ export async function down(options: any): Promise<void> {
 			throw Error("all command not implemented");
 		} else {
 			for (let i = 0; i < inputOptions.num; i++) {
-				if (migrationArray.length === 0) {
+				if (migrations.length === 0) {
 					continue;
 				}
 
-				if (i >= migrationArray.length) {
+				if (i >= migrations.length) {
 					throw Error("exceeded migration length");
 				}
 
-				const migration = migrationArray[i];
+				const migration = migrations[i];
 				const fileName = migration.name + ".down.sql";
 
 				const filePath = path.join(inputOptions.dir, fileName);

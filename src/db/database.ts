@@ -1,3 +1,4 @@
+import type { Migration } from "../migrations/index.js";
 import type { SqlParam } from "./sql_param.js";
 import type { SqlValue } from "./sql_value.js";
 
@@ -6,6 +7,9 @@ export interface Database {
 	close(): Promise<void>;
 	query(sql: string, params?: SqlParam): Promise<SqlResult>;
 	transaction(): Transaction;
+	initMigrationTable(): Promise<void>;
+	loadMigrationTableMap(): Promise<Map<string, Migration>>;
+	loadMigrationTableArray(): Promise<Migration[]>;
 }
 
 export interface Transaction {
