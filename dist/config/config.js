@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import path from "node:path";
 import z from "zod";
 import dotenv from "dotenv";
 const require = createRequire(import.meta.url);
@@ -94,8 +95,12 @@ export function loadOptions(opts) {
     }
 }
 function loadEnv(filePath) {
+    const baseDir = process.env["INIT_CWD"] || process.cwd();
+    const resolvedPath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(baseDir, filePath);
     // Load env file
-    const envRes = dotenv.config({ quiet: true, path: filePath });
+    const envRes = dotenv.config({ quiet: true, path: resolvedPath });
     if (envRes.error) {
         throw Error(envRes.error.message);
     }
@@ -121,9 +126,13 @@ function loadEnv(filePath) {
  * @returns {Config}
  */
 function loadConfig(filePath) {
-    const config = require(filePath);
-    // Validate config
-    const parseRes = configSchema.safeParse(config);
+    const baseDir = process.env["INIT_CWD"] || process.cwd();
+    const resolvedPath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(baseDir, filePath);
+    const config = require(resolvedPath);
+    // Validate config, default for module js file
+    const parseRes = configSchema.safeParse(config?.default ?? config);
     if (!parseRes.success) {
         throw Error(z.prettifyError(parseRes.error));
     }

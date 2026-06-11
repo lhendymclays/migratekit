@@ -44,6 +44,7 @@
 		"zod": "^4.4.3"
 	},
 	"bin": {
-		"migratekit": "dist/cli.js"
+		"migrate-kit": "dist/cli.js"
 	}
 }
+

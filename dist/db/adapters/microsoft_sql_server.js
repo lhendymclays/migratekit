@@ -69,6 +69,110 @@ export class SqlServerDatabase {
     transaction() {
         return new SqlServerTransaction(this.pool);
     }
+    /**
+     * Initializes migration table if not found
+     */
+    async initMigrationTable() {
+        try {
+            await this.query(`
+				IF OBJECT_ID('dbo.migrations', 'U') IS NULL
+				BEGIN
+					CREATE TABLE dbo.migrations (
+						id INT IDENTITY(1,1) PRIMARY KEY,
+						name VARCHAR(255) NOT NULL UNIQUE,
+						time_stamp DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET()
+					);
+				END
+			`);
+        }
+        catch (err) {
+            const errorPrefix = "initializing migration table";
+            if (err instanceof Error) {
+                throw Error(`${errorPrefix}: ${err.message}`);
+            }
+            else {
+                throw Error(`${errorPrefix}: unknown error type: ${String(err)}`);
+            }
+        }
+    }
+    /**
+     * Returns all migrations as map, with filename as the key
+     * @returns {Promise<Map<string, Migration>>}
+     */
+    async loadMigrationTableMap() {
+        try {
+            const res = await this.query(`
+				SELECT id, name, time_stamp
+				FROM migrations
+				ORDER BY time_stamp DESC, id DESC, name DESC;
+			`);
+            const map = new Map();
+            for (const row of res.rows()) {
+                const id = row.get("id")?.toNumber();
+                const name = row.get("name")?.toString();
+                const timeStamp = row.get("time_stamp")?.toDate();
+                if (id === undefined) {
+                    throw Error("id was not found");
+                }
+                if (name === undefined) {
+                    throw Error("name was not found");
+                }
+                if (timeStamp === undefined) {
+                    throw Error("time stamp was not found");
+                }
+                map.set(name, { id, name, timeStamp });
+            }
+            return map;
+        }
+        catch (err) {
+            const errorPrefix = "loading migration table map";
+            if (err instanceof Error) {
+                throw Error(`${errorPrefix}: ${err.message}`);
+            }
+            else {
+                throw Error(`${errorPrefix}: unknown error type: ${String(err)}`);
+            }
+        }
+    }
+    /**
+     * Returns all migrations as an array
+     * @returns {Promise<Migration[]>}
+     */
+    async loadMigrationTableArray() {
+        try {
+            const res = await this.query(`
+				SELECT id, name, time_stamp
+				FROM migrations
+				ORDER BY time_stamp DESC, id DESC, name DESC;
+			`);
+            const array = [];
+            for (const row of res.rows()) {
+                const id = row.get("id")?.toNumber();
+                const name = row.get("name")?.toString();
+                const timeStamp = row.get("time_stamp")?.toDate();
+                if (id === undefined) {
+                    throw Error("id was not found");
+                }
+                if (name === undefined) {
+                    throw Error("name was not found");
+                }
+                if (timeStamp === undefined) {
+                    throw Error("time stamp was not found");
+                }
+                array.push({ id, name, timeStamp });
+            }
+            return array;
+        }
+        catch (err) {
+            const errorPrefix = "loading migration table array";
+            if (err instanceof Error) {
+                throw Error(`${errorPrefix}: ${err.message}`);
+            }
+            else {
+                throw Error(`${errorPrefix}: unknown error type: ${String(err)}`);
+            }
+        }
+    }
 }
 export class SqlServerTransaction {
     transaction;

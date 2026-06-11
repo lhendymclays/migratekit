@@ -3,7 +3,7 @@ import fs from "node:fs";
 import z from "zod";
 import { createDatabase } from "../db/factory.js";
 import { loadOptions } from "../config/config.js";
-import { loadDownMigrationFiles, loadMigrationTable, loadUpMigrationFiles } from "../migrations/index.js";
+import { loadDownMigrationFiles, loadUpMigrationFiles } from "../migrations/index.js";
 /**
  * Schema for cli options for down migration
  */
@@ -49,9 +49,10 @@ export async function up(options) {
     const db = createDatabase(config);
     try {
         await db.connect();
+        await db.initMigrationTable();
         const tsx = db.transaction();
         const [migrations, files] = await Promise.all([
-            loadMigrationTable(db),
+            db.loadMigrationTableMap(),
             loadUpMigrationFiles(inputOptions.dir)
         ]);
         await tsx.begin();
@@ -98,16 +99,16 @@ export async function down(options) {
         throw Error(z.prettifyError(parseRes.error));
     }
     const inputOptions = parseRes.data;
-    const config = await loadOptions(inputOptions);
+    const config = loadOptions(inputOptions);
     const db = createDatabase(config);
     try {
         await db.connect();
+        await db.initMigrationTable();
         const tsx = db.transaction();
         const [migrations, files] = await Promise.all([
-            loadMigrationTable(db),
+            db.loadMigrationTableArray(),
             loadDownMigrationFiles(inputOptions.dir)
         ]);
-        const migrationArray = Array.from(migrations.values());
         await tsx.begin();
         // Migrations
         if (inputOptions.all) {
@@ -115,13 +116,13 @@ export async function down(options) {
         }
         else {
             for (let i = 0; i < inputOptions.num; i++) {
-                if (migrationArray.length === 0) {
+                if (migrations.length === 0) {
                     continue;
                 }
-                if (i >= migrationArray.length) {
+                if (i >= migrations.length) {
                     throw Error("exceeded migration length");
                 }
-                const migration = migrationArray[i];
+                const migration = migrations[i];
                 const fileName = migration.name + ".down.sql";
                 const filePath = path.join(inputOptions.dir, fileName);
                 if (!files.some((f) => f === fileName)) {

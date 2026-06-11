@@ -3,6 +3,7 @@ import type { Database, Transaction, SqlResult, SqlRecord } from "../database.js
 import type { Config } from "../../config/config.js";
 import { SqlValue } from "../sql_value.js";
 import type { SqlParam } from "../sql_param.js";
+import type { Migration } from "../../migrations/index.js";
 export declare class SqlServerDatabase implements Database {
     pool: sql.ConnectionPool;
     config: Config;
@@ -26,6 +27,20 @@ export declare class SqlServerDatabase implements Database {
      */
     query(sqlQuery: string, params?: SqlParam): Promise<SqlServerResult>;
     transaction(): Transaction;
+    /**
+     * Initializes migration table if not found
+     */
+    initMigrationTable(): Promise<void>;
+    /**
+     * Returns all migrations as map, with filename as the key
+     * @returns {Promise<Map<string, Migration>>}
+     */
+    loadMigrationTableMap(): Promise<Map<string, Migration>>;
+    /**
+     * Returns all migrations as an array
+     * @returns {Promise<Migration[]>}
+     */
+    loadMigrationTableArray(): Promise<Migration[]>;
 }
 export declare class SqlServerTransaction implements Transaction {
     private transaction;
