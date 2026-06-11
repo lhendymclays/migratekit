@@ -1,7 +1,7 @@
 {
 	"name": "migrate-kit",
 	"type": "module",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Database migration tooling",
 	"author": "Lewis Hendy",
 	"license": "MIT",
@@ -47,4 +47,3 @@
 		"migrate-kit": "dist/cli.js"
 	}
 }
-
