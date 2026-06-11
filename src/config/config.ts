@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import path from "node:path";
 import z from "zod";
 import dotenv from "dotenv";
 
@@ -122,8 +123,12 @@ export function loadOptions(opts: InputOptions): Config {
 }
 
 function loadEnv(filePath: string) {
+	const resolvedPath = path.isAbsolute(filePath)
+		? filePath
+		: path.resolve(process.cwd(), filePath);
+
 	// Load env file
-	const envRes = dotenv.config({ quiet: true, path: filePath });
+	const envRes = dotenv.config({ quiet: true, path: resolvedPath });
 	if (envRes.error) {
 		throw Error(envRes.error.message);
 	}
@@ -152,7 +157,11 @@ function loadEnv(filePath: string) {
  * @returns {Config}
  */
 function loadConfig(filePath: string): Config {
-	const config = require(filePath);
+	const resolvedPath = path.isAbsolute(filePath)
+		? filePath
+		: path.resolve(process.cwd(), filePath);
+
+	const config = require(resolvedPath);
 
 	// Validate config
 	const parseRes = configSchema.safeParse(config);
