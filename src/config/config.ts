@@ -123,9 +123,11 @@ export function loadOptions(opts: InputOptions): Config {
 }
 
 function loadEnv(filePath: string) {
+	const baseDir = process.env["INIT_CWD"] || process.cwd();
+
 	const resolvedPath = path.isAbsolute(filePath)
 		? filePath
-		: path.resolve(process.cwd(), filePath);
+		: path.resolve(baseDir, filePath);
 
 	// Load env file
 	const envRes = dotenv.config({ quiet: true, path: resolvedPath });
@@ -157,9 +159,11 @@ function loadEnv(filePath: string) {
  * @returns {Config}
  */
 function loadConfig(filePath: string): Config {
+	const baseDir = process.env["INIT_CWD"] || process.cwd();
+
 	const resolvedPath = path.isAbsolute(filePath)
 		? filePath
-		: path.resolve(process.cwd(), filePath);
+		: path.resolve(baseDir, filePath);
 
 	const config = require(resolvedPath);
 
