@@ -167,8 +167,8 @@ function loadConfig(filePath: string): Config {
 
 	const config = require(resolvedPath);
 
-	// Validate config
-	const parseRes = configSchema.safeParse(config);
+	// Validate config, default for module js file
+	const parseRes = configSchema.safeParse(config?.default ?? config);
 	if (!parseRes.success) {
 		throw Error(z.prettifyError(parseRes.error));
 	}
